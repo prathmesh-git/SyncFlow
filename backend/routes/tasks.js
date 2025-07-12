@@ -3,6 +3,12 @@ const router = express.Router();
 const Task = require('../models/Task');
 const Log = require('../models/Log');
 const User = require('../models/User');
+const authenticateUser = require('../middleware/auth');
+
+
+// protect all task routes
+router.use(authenticateUser);
+
 
 // get tasks
 
