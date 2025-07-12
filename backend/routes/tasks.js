@@ -9,30 +9,49 @@ const authenticateUser = require('../middlewares/auth.js');
 
 // protect all task routes
 router.use(authenticateUser);
-
-// Smart Assign
+// Smart Assign
 router.post('/smart-assign/:id', async (req, res) => {
   const { id } = req.params;
+
   try {
+    // 1️⃣  Find all users and count their active tasks
     const users = await User.find();
     const userTaskCounts = {};
 
-    for (let user of users) {
-      const count = await Task.countDocuments({ assignedTo: user._id, status: { $ne: 'Done' } });
+    for (const user of users) {
+      const count = await Task.countDocuments({
+        assignedTo: user._id,
+        status: { $ne: 'Done' }          // only tasks not done
+      });
       userTaskCounts[user._id] = count;
     }
 
-    const bestUserId = Object.entries(userTaskCounts).sort((a, b) => a[1] - b[1])[0][0];
+    // 2️⃣  Pick the user with the fewest active tasks
+    const bestUserId = Object.entries(userTaskCounts)
+      .sort((a, b) => a[1] - b[1])[0][0];
 
-    const task = await Task.findByIdAndUpdate(id, {
-      assignedTo: bestUserId,
-      updatedAt: Date.now()
-    }, { new: true });
+    // 3️⃣  Update the task’s assignedTo
+    await Task.findByIdAndUpdate(
+      id,
+      { assignedTo: bestUserId, updatedAt: Date.now() },
+      { new: false }                       // we’ll re‑fetch below
+    );
 
-    await Log.create({ action: "smart-assigned", taskId: id, userId: bestUserId });
+    // 4️⃣  Re‑fetch the task and populate assignedTo
+    const updatedTask = await Task.findById(id).populate('assignedTo');
 
-    res.json(task);
+    // 5️⃣  Log the action
+    await Log.create({
+      action: 'smart-assigned',
+      taskId: id,
+      userId: bestUserId
+    });
+
+    // 6️⃣  Return the populated task
+    res.json(updatedTask);
+
   } catch (err) {
+    console.error('Smart Assign error:', err);
     res.status(400).json({ error: err.message });
   }
 });

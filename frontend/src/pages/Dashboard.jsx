@@ -94,27 +94,43 @@ const handleAddTask = async (newTask) => {
   try {
     await axios.post(
       "http://localhost:5000/api/tasks",
-      {
-        ...newTask,
-        assignedTo: user.userId,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      { ...newTask, assignedTo: user.userId },
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
-setTasks((prev) =>
-  prev.map((t) => (t._id === task._id ? res.data : t))
-);
+    const refreshed = await axios.get("http://localhost:5000/api/tasks", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    setTasks(updated.data);
+    setTasks(refreshed.data);     // ✅ refreshed instead of updated
     setShowForm(false);
   } catch (err) {
     alert("Error creating task: " + (err.response?.data?.error || err.message));
   }
 };
+
+// Smart Assign
+  const handleSmartAssign = async (taskId) => {
+    console.log("🧠 Calling Smart Assign for task:", taskId);
+    try {
+      const res = await axios.post(
+        `http://localhost:5000/api/tasks/smart-assign/${taskId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setTasks((prev) =>
+        prev.map((task) => (task._id === taskId ? res.data : task))
+      );
+      console.log("Smart assigned to:", res.data.assignedTo?.username || res.data.assignedTo);
+    } catch (err) {
+      alert("Smart Assign failed: " + (err.response?.data?.error || err.message));
+    }
+  };
 
   return (
     <div style={{ padding: "20px" }}>
@@ -133,7 +149,7 @@ setTasks((prev) =>
       >
         <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
           {Object.keys(grouped).map((status) => (
-            <Column key={status} title={status} tasks={grouped[status]} />
+            <Column key={status} title={status} tasks={grouped[status]} onSmartAssign={handleSmartAssign} />
           ))}
         </div>
 
