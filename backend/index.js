@@ -18,7 +18,9 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/tasks', require('./routes/tasks'));
+app.use('/api/logs', require('./routes/logs'));
 
 // Socket setup
 io.on('connection', (socket) => {
