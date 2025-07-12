@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Log = require('../models/Log');
-const authenticateUser = require('../middleware/auth');
+const authenticateUser = require('../middlewares/auth');
 
 
 // protect logs routes

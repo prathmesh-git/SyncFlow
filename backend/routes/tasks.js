@@ -1,13 +1,41 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
-const Task = require('../models/Task');
+const Task = require('../models/Tasks');
 const Log = require('../models/Log');
 const User = require('../models/User');
-const authenticateUser = require('../middleware/auth');
+const authenticateUser = require('../middlewares/auth.js');
 
 
 // protect all task routes
 router.use(authenticateUser);
+
+// Smart Assign
+router.post('/smart-assign/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const users = await User.find();
+    const userTaskCounts = {};
+
+    for (let user of users) {
+      const count = await Task.countDocuments({ assignedTo: user._id, status: { $ne: 'Done' } });
+      userTaskCounts[user._id] = count;
+    }
+
+    const bestUserId = Object.entries(userTaskCounts).sort((a, b) => a[1] - b[1])[0][0];
+
+    const task = await Task.findByIdAndUpdate(id, {
+      assignedTo: bestUserId,
+      updatedAt: Date.now()
+    }, { new: true });
+
+    await Log.create({ action: "smart-assigned", taskId: id, userId: bestUserId });
+
+    res.json(task);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 
 // get tasks
@@ -36,28 +64,38 @@ router.post('/', async(req, res) => {
 
 // update and handle conflict
 
-router.post('/:id', async (req, res) => {
-    const { id } = req.params;
-    const { updatedAt, ...updates } = req.body;
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  let { updatedAt, _id, __v, ...updates } = req.body;
 
-    try {
-        const existingTask = await Task.findById(id);
-        if(new Date(updatedAt).getTime() !== new Date(existingTask.updatedAt).getTime()) {
-            return res.status(409).json({conflict: true, serverData: existingTask });
-        }
+  try {
+    const existingTask = await Task.findById(id);
+    if (!existingTask) return res.status(404).json({ error: "Task not found" });
 
-        updates.updatedAt = Date.now();
-        const updatedTask = await Task.findByIdAndUpdate(id, updates, {new:true});
-
-        await Log.create({ action: "updated", taskId: id, userId: updates.assignedTo });
-
-        res.json(updatedTask);
-
-    }catch(err){
-        res.status(400).json({ error: err.message });
+    if (new Date(updatedAt).getTime() !== new Date(existingTask.updatedAt).getTime()) {
+      return res.status(409).json({ conflict: true, serverData: existingTask });
     }
-});
 
+    // ✅ Fix: cast assignedTo to ObjectId if it's a string
+    if (typeof updates.assignedTo === 'string') {
+      updates.assignedTo = new mongoose.Types.ObjectId(updates.assignedTo);
+    } else if (!updates.assignedTo) {
+      updates.assignedTo = existingTask.assignedTo;
+    }
+
+    updates.updatedAt = Date.now();
+    console.log("🛠️ Saving updates:", updates);
+
+    const populated = await Task.findByIdAndUpdate(id, updates, {
+  new: true,
+}).populate('assignedTo');
+
+res.json(populated);
+
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 // Delete task
 
 router.delete('/:id', async (req, res) => {
@@ -72,31 +110,5 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// Smart Assign
-router.post('/smart-assign/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const users = await User.find();
-    const userTaskCounts = {};
-
-    for (let user of users) {
-      const count = await Task.countDocuments({ assignedTo: user._id, status: { $ne: 'Done' } });
-      userTaskCounts[user._id] = count;
-    }
-
-    const bestUserId = Object.entries(userTaskCounts).sort((a, b) => a[1] - b[1])[0][0];
-
-    const task = await Task.findByIdAndUpdate(id, {
-      assignedTo: bestUserId,
-      updatedAt: Date.now()
-    }, { new: true });
-
-    await Log.create({ action: "smart-assigned", taskId: id, userId: bestUserId });
-
-    res.json(task);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
 
 module.exports = router;
