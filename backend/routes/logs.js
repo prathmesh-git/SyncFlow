@@ -1,16 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const Log = require('../models/Log');
+const User = require('../models/User');
+const Task = require('../models/Tasks');
 const authenticateUser = require('../middlewares/auth');
 
-
-// protect logs routes
 router.use(authenticateUser);
 
-
 router.get('/', async (req, res) => {
-    const logs = await Log.find().sort({timestamp: -1}).limit(20).populate('userId').populate('taskId');
+  try {
+    const logs = await Log.find()
+      .sort({ timestamp: -1 })
+      .limit(20)
+      .populate('userId', 'username')
+      .populate('taskId', 'title');
+
     res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

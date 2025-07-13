@@ -3,6 +3,8 @@ import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import Column from "../components/Column";
 import TaskForm from "../components/TaskForm";
+import LogPanel from "../components/LogPanel";
+
 import {
   DndContext,
   closestCenter,
@@ -102,7 +104,7 @@ const handleAddTask = async (newTask) => {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    setTasks(refreshed.data);     // ✅ refreshed instead of updated
+    setTasks(refreshed.data); 
     setShowForm(false);
   } catch (err) {
     alert("Error creating task: " + (err.response?.data?.error || err.message));
@@ -111,7 +113,7 @@ const handleAddTask = async (newTask) => {
 
 // Smart Assign
   const handleSmartAssign = async (taskId) => {
-    console.log("🧠 Calling Smart Assign for task:", taskId);
+    console.log("Calling Smart Assign for task:", taskId);
     try {
       const res = await axios.post(
         `http://localhost:5000/api/tasks/smart-assign/${taskId}`,
@@ -171,6 +173,8 @@ const handleAddTask = async (newTask) => {
       {showForm && (
         <TaskForm onSubmit={handleAddTask} onClose={() => setShowForm(false)} />
       )}
+
+      <LogPanel />
     </div>
   );
 }
