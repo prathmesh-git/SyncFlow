@@ -31,11 +31,24 @@ router.get("/", async (_req, res) => {
 });
 
 router.post("/", async (req, res) => {
+  const { title, description, assignedTo, status, priority } = req.body;
+  const invalidTitles = ["Todo", "In Progress", "Done"];
+
   try {
-    const task = await Task.create(req.body);
-    const log  = await Log.create({ action: "created", taskId: task._id, userId: req.body.assignedTo });
+   
+    if (invalidTitles.includes(title.trim())) {
+      return res.status(400).json({ error: "Task title cannot match column names." });
+    }
+
+    const existing = await Task.findOne({ title: title.trim() });
+    if (existing) {
+      return res.status(400).json({ error: "Task title already exists." });
+    }
+
+    const task = await Task.create({ title, description, assignedTo, status, priority });
+    await Log.create({ action: "created", taskId: task._id, userId: assignedTo });
+
     await emitTaskUpdate(req.app, task._id);
-    await emitLog(req.app, log._id);
     res.status(201).json(task);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -55,6 +68,17 @@ router.put("/:id", async (req, res) => {
     if (typeof updates.assignedTo === "string")
       updates.assignedTo = new mongoose.Types.ObjectId(updates.assignedTo);
     else if (!updates.assignedTo) updates.assignedTo = existing.assignedTo;
+
+    if (title) {
+  if (invalidTitles.includes(title.trim())) {
+    return res.status(400).json({ error: "Task title cannot match column names." });
+  }
+
+  const existing = await Task.findOne({ title: title.trim() });
+  if (existing && existing._id.toString() !== id) {
+    return res.status(400).json({ error: "Task title already exists." });
+  }
+}
 
     updates.updatedAt = Date.now();
 

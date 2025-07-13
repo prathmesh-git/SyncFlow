@@ -58,9 +58,12 @@ useEffect(() => {
 useEffect(() => {
   if (!socket) return;
 
-  const handleNewLog = (log) => {
+    const handleNewLog = (log) => {
     console.log("📜 Received real-time log:", log);
-    setLogs((prev) => [log, ...prev]);
+    setLogs((prev) => {
+      const updated = [log, ...prev];
+      return updated.slice(0, 20);
+    });
   };
 
   const handleUpdate = (updatedTask) => {

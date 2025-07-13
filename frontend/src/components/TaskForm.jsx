@@ -12,10 +12,24 @@ export default function TaskForm({ onSubmit, onClose }) {
     setTask({ ...task, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(task);
-  };
+const handleSubmit = (e) => {
+  e.preventDefault();
+
+  const invalidTitles = ["todo", "in progress", "done"];
+  const trimmedTitle = form.title.trim().toLowerCase();
+
+  if (invalidTitles.includes(trimmedTitle)) {
+    alert("Task title cannot be 'Todo', 'In Progress' or 'Done'");
+    return;
+  }
+
+  if (!form.title.trim()) {
+    alert("Title is required");
+    return;
+  }
+
+  onSubmit(form);
+};
 
   return (
     <div style={{

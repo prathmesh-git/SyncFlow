@@ -27,11 +27,12 @@ export default function LogPanel() {
   return (
     <div>
       <h3>Activity Log</h3>
-     <ul>
+      <ul>
         {logs.map((log) => (
           <li key={log._id}>
-            <strong>{log.action}</strong> — Task: {log.taskId?.title || log.taskId?._id} — 
-            User: {log.userId?.username || log.userId?._id}
+            <strong>{log.userId?.username || "Unknown"}</strong> {log.action} task{" "}
+            <strong>{log.taskId?.title || "Deleted Task"}</strong> at{" "}
+            {new Date(log.timestamp).toLocaleString()}
           </li>
         ))}
       </ul>
