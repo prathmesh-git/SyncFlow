@@ -60,35 +60,51 @@ router.put("/:id", async (req, res) => {
   let { updatedAt, _id, __v, ...updates } = req.body;
 
   try {
+    console.log("📥 Incoming update payload:", req.body);
+
     const existing = await Task.findById(id);
     if (!existing) return res.status(404).json({ error: "Task not found" });
-    if (new Date(updatedAt).getTime() !== new Date(existing.updatedAt).getTime())
+
+    if (new Date(updatedAt).getTime() !== new Date(existing.updatedAt).getTime()) {
       return res.status(409).json({ conflict: true, serverData: existing });
+    }
 
-    if (typeof updates.assignedTo === "string")
-      updates.assignedTo = new mongoose.Types.ObjectId(updates.assignedTo);
-    else if (!updates.assignedTo) updates.assignedTo = existing.assignedTo;
+    // ✅ Extract title properly
+    const { title } = updates;
+    const invalidTitles = ["Todo", "In Progress", "Done"];
 
+    // ✅ Validate title doesn't match column names
+    if (title && invalidTitles.includes(title.trim())) {
+      return res.status(400).json({ error: "Task title cannot match column names." });
+    }
+
+    // ✅ Check for uniqueness
     if (title) {
-  if (invalidTitles.includes(title.trim())) {
-    return res.status(400).json({ error: "Task title cannot match column names." });
-  }
+      const duplicate = await Task.findOne({ title: title.trim() });
+      if (duplicate && duplicate._id.toString() !== id) {
+        return res.status(400).json({ error: "Task title already exists." });
+      }
+    }
 
-  const existing = await Task.findOne({ title: title.trim() });
-  if (existing && existing._id.toString() !== id) {
-    return res.status(400).json({ error: "Task title already exists." });
-  }
-}
+    if (typeof updates.assignedTo === "string") {
+      updates.assignedTo = new mongoose.Types.ObjectId(updates.assignedTo);
+    } else if (!updates.assignedTo) {
+      updates.assignedTo = existing.assignedTo;
+    }
 
     updates.updatedAt = Date.now();
 
     const task = await Task.findByIdAndUpdate(id, updates, { new: true }).populate("assignedTo");
-    const log  = await Log.create({ action: "updated", taskId: task._id, userId: updates.assignedTo });
+    const log = await Log.create({ action: "updated", taskId: task._id, userId: updates.assignedTo });
+
     await emitTaskUpdate(req.app, task._id);
     await emitLog(req.app, log._id);
+
     res.json(task);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error("PUT /api/tasks/:id failed:", err.message);
+    console.error("Full error:", err);
+    return res.status(400).json({ error: err.message });
   }
 });
 
