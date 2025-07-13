@@ -4,6 +4,8 @@ import { useAuth } from "../context/AuthContext";
 import Column from "../components/Column";
 import TaskForm from "../components/TaskForm";
 import LogPanel from "../components/LogPanel";
+import { useSocket } from "../context/SocketContext";
+
 
 import {
   DndContext,
@@ -16,25 +18,81 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [activeTask, setActiveTask] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const socket = useSocket();
+  const [logs, setLogs] = useState([]);
 
   // Fetch tasks
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/api/tasks", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setTasks(res.data);
-      } catch (err) {
-        console.error("Error fetching tasks:", err);
-        if (err.response?.status === 401) logout();
-      }
-    };
+ useEffect(() => {
+  const fetchTasks = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/tasks", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTasks(res.data);
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+      if (err.response?.status === 401) logout();
+    }
+  };
+  fetchTasks();
+}, [token, logout]);
 
-    fetchTasks();
-  }, [token, logout]);
+//fetchLogs
+
+useEffect(() => {
+  const fetchLogs = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/logs", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setLogs(res.data);
+    } catch (err) {
+      console.error("Error fetching logs:", err);
+    }
+  };
+  fetchLogs();
+}, [token]);
+
+//socketlisteners
+
+useEffect(() => {
+  if (!socket) return;
+
+  const handleNewLog = (log) => {
+    console.log("📜 Received real-time log:", log);
+    setLogs((prev) => [log, ...prev]);
+  };
+
+  const handleUpdate = (updatedTask) => {
+    console.log("📥 Got real-time task:", updatedTask);
+    setTasks((prev) => {
+      const index = prev.findIndex((t) => t._id === updatedTask._id);
+      if (index !== -1) {
+        const clone = [...prev];
+        clone[index] = updatedTask;
+        return clone;
+      } else {
+        return [...prev, updatedTask];
+      }
+    });
+  };
+
+  const handleDelete = (deletedId) => {
+    console.log("🗑️ Got real-time delete:", deletedId);
+    setTasks((prev) => prev.filter((t) => t._id !== deletedId));
+  };
+
+  socket.on("log-created", handleNewLog);
+  socket.on("task-updated", handleUpdate);
+  socket.on("task-deleted", handleDelete);
+
+  return () => {
+    socket.off("log-created", handleNewLog);
+    socket.off("task-updated", handleUpdate);
+    socket.off("task-deleted", handleDelete);
+  };
+}, [socket]);
+
 
   // Group tasks by status
   const grouped = {
@@ -174,7 +232,7 @@ const handleAddTask = async (newTask) => {
         <TaskForm onSubmit={handleAddTask} onClose={() => setShowForm(false)} />
       )}
 
-      <LogPanel />
+      <LogPanel logs={logs} />
     </div>
   );
 }

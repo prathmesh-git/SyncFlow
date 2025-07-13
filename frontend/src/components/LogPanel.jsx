@@ -1,35 +1,37 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { useSocket } from "../context/SocketContext";
 
 export default function LogPanel() {
-  const { token } = useAuth();
   const [logs, setLogs] = useState([]);
+  const { token } = useAuth();
+  const socket = useSocket();
 
   useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/api/logs", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setLogs(res.data);
-      } catch (err) {
-        console.error("Error fetching logs:", err);
-      }
-    };
-
-    fetchLogs();
+    axios.get("http://localhost:5000/api/logs", {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then((res) => setLogs(res.data));
   }, [token]);
 
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("log-created", (newLog) => {
+      setLogs((prev) => [newLog, ...prev]);
+    });
+
+    return () => socket.off("log-created");
+  }, [socket]);
+
   return (
-    <div style={{ marginTop: "30px" }}>
-      <h3>📜 Recent Activity Logs</h3>
-      <ul>
+    <div>
+      <h3>Activity Log</h3>
+     <ul>
         {logs.map((log) => (
           <li key={log._id}>
-            <strong>{log.userId?.username || "System"}</strong> {log.action}{" "}
-            task <strong>{log.taskId?.title || "[Deleted Task]"}</strong>{" "}
-            at {new Date(log.timestamp).toLocaleString()}
+            <strong>{log.action}</strong> — Task: {log.taskId?.title || log.taskId?._id} — 
+            User: {log.userId?.username || log.userId?._id}
           </li>
         ))}
       </ul>

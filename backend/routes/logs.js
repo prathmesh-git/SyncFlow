@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Log = require('../models/Log');
-const User = require('../models/User');
-const Task = require('../models/Tasks');
 const authenticateUser = require('../middlewares/auth');
 
 router.use(authenticateUser);
