@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import Column from "../components/Column";
 import TaskForm from "../components/TaskForm";
@@ -8,7 +8,7 @@ import ConflictModal from "../components/ConflictModal";
 import { useSocket } from "../context/SocketContext";
 import { DndContext, closestCenter, DragOverlay } from "@dnd-kit/core";
 import Navbar from "../components/Navbar";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 import "./Dashboard.css";
 
 export default function Dashboard() {
@@ -24,7 +24,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/tasks", {
+        const res = await API.get("/api/tasks", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setTasks(res.data);
@@ -38,7 +38,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/logs", {
+        const res = await API.get("/api/logs", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setLogs(res.data);
@@ -91,7 +91,9 @@ export default function Dashboard() {
   tasks.forEach((task) => grouped[task.status].push(task));
 
   const handleDragStart = (event) => {
-    const task = JSON.parse(JSON.stringify(tasks.find((t) => t._id === event.active.id)));
+    const task = JSON.parse(
+      JSON.stringify(tasks.find((t) => t._id === event.active.id))
+    );
     setActiveTask(task);
   };
 
@@ -117,13 +119,9 @@ export default function Dashboard() {
     if (!payload.title || !payload.status || !payload.updatedAt) return;
 
     try {
-      const res = await axios.put(
-        `http://localhost:5000/api/tasks/${task._id}`,
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await API.put(`/api/tasks/${task._id}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setTasks((prev) => prev.map((t) => (t._id === task._id ? res.data : t)));
     } catch (err) {
       console.error("Error updating task:", err);
@@ -133,42 +131,41 @@ export default function Dashboard() {
   };
 
   const handleAddTask = async (newTask) => {
-  try {
-    await axios.post(
-      "http://localhost:5000/api/tasks",
-      { ...newTask, assignedTo: user.userId },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    try {
+      await API.post(
+        "/api/tasks",
+        { ...newTask, assignedTo: user.userId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    const res = await axios.get("http://localhost:5000/api/tasks", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setTasks(res.data);
-    setShowForm(false);
-    toast.success("Task added!");
-  } catch (err) {
-    toast.error("Error creating task: " + (err.response?.data?.error || err.message));
-    throw err; 
-  }
-};
+      const res = await API.get("/api/tasks", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTasks(res.data);
+      setShowForm(false);
+      toast.success("Task added!");
+    } catch (err) {
+      toast.error("Error creating task: " + (err.response?.data?.error || err.message));
+      throw err;
+    }
+  };
 
   const handleDeleteTask = async (taskId) => {
     try {
-      await axios.delete(`http://localhost:5000/api/tasks/${taskId}`, {
+      await API.delete(`/api/tasks/${taskId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTasks((prev) => prev.filter((t) => t._id !== taskId));
-      toast.success("Task deleted successfully"); 
+      toast.success("Task deleted successfully");
     } catch (err) {
       toast.error("Delete failed: " + (err.response?.data?.error || err.message));
     }
   };
 
-
   const handleSmartAssign = async (taskId) => {
     try {
-      const res = await axios.post(
-        `http://localhost:5000/api/tasks/smart-assign/${taskId}`,
+      const res = await API.post(
+        `/api/tasks/smart-assign/${taskId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -181,63 +178,58 @@ export default function Dashboard() {
   return (
     <>
       <Navbar onLogout={logout} />
-    
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h2>Welcome, {user?.username}</h2>
-        <div>
-          <button className="add-btn" onClick={() => setShowForm(true)}>
-            + Add Task
-          </button>
+
+      <div className="dashboard-container">
+        <div className="dashboard-header">
+          <h2>Welcome, {user?.username}</h2>
+          <div>
+            <button className="add-btn" onClick={() => setShowForm(true)}>
+              + Add Task
+            </button>
+          </div>
         </div>
+
+        <DndContext
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="board">
+            {Object.keys(grouped).map((status) => (
+              <Column
+                key={status}
+                title={status}
+                tasks={grouped[status]}
+                onSmartAssign={handleSmartAssign}
+                onDelete={handleDeleteTask}
+              />
+            ))}
+          </div>
+
+          <DragOverlay>
+            {activeTask && <div className="drag-overlay">{activeTask.title}</div>}
+          </DragOverlay>
+        </DndContext>
+
+        {showForm && (
+          <TaskForm onSubmit={handleAddTask} onClose={() => setShowForm(false)} />
+        )}
+
+        <LogPanel logs={logs} />
+
+        {conflict && (
+          <ConflictModal
+            conflict={conflict}
+            onCancel={() => setConflict(null)}
+            onResolved={(mergedTask) => {
+              setTasks((prev) =>
+                prev.map((t) => (t._id === mergedTask._id ? mergedTask : t))
+              );
+              setConflict(null);
+            }}
+          />
+        )}
       </div>
-
-      <DndContext
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="board">
-          {Object.keys(grouped).map((status) => (
-            <Column
-              key={status}
-              title={status}
-              tasks={grouped[status]}
-              onSmartAssign={handleSmartAssign}
-              onDelete={handleDeleteTask}
-            />
-          ))}
-        </div>
-
-        <DragOverlay>
-          {activeTask && (
-            <div className="drag-overlay">
-              {activeTask.title}
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
-
-      {showForm && (
-        <TaskForm onSubmit={handleAddTask} onClose={() => setShowForm(false)} />
-      )}
-
-      <LogPanel logs={logs} />
-
-      {conflict && (
-        <ConflictModal
-          conflict={conflict}
-          onCancel={() => setConflict(null)}
-          onResolved={(mergedTask) => {
-            setTasks((prev) =>
-              prev.map((t) => (t._id === mergedTask._id ? mergedTask : t))
-            );
-            setConflict(null);
-          }}
-        />
-      )}
-      
-    </div>
     </>
   );
 }

@@ -1,8 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 
 const SocketContext = createContext(null);
+
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 export function SocketProvider({ children }) {
   const { token } = useAuth();
@@ -10,16 +13,19 @@ export function SocketProvider({ children }) {
 
   useEffect(() => {
     if (!token) {
-      // if user logs out, disconnect socket
+      // If user logs out, disconnect socket
       socket?.disconnect();
       setSocket(null);
       return;
     }
 
-    const sock = io("http://localhost:5000", {
-  auth: { token },
-  autoConnect: false,
-});
+    const sock = io(SOCKET_URL, {
+      auth: { token },
+      withCredentials: true,
+      transports: ["websocket"], // ensure it's not using polling
+      autoConnect: false,
+    });
+
     console.log("🔐 Connecting socket with token:", token);
 
     sock.connect();
