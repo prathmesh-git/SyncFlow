@@ -8,10 +8,21 @@
   margin-bottom: 1rem;
 }
 
+.navbar-logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: black;
+}
+
+.navbar-logo-link img {
+  margin-right: 8px;
+}
+
 .navbar-logo {
-  margin: 0;
   font-size: 1.4rem;
   font-weight: bold;
+  text-decoration: none; /* removes underline */
 }
 
 .navbar-user {

@@ -7,7 +7,11 @@ export default function Navbar({ onLogout }) {
   return (
     <nav className="navbar">
       <div className="navbar-left">
-        <h1 className="navbar-logo">🗂️ SyncFlow</h1>
+        <a href="/" class="navbar-logo-link">
+      <img src="./src/assets/syncflow_icon.svg" alt="Synflow Logo" width="32" height="32" />
+        <span className="navbar-logo">Syncflow</span>
+      </a>
+
       </div>
       <div className="navbar-right">
         <span className="navbar-user">Hi, {user?.username}</span>
