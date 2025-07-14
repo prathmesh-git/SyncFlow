@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import "./LogPanel.css";
@@ -9,11 +9,15 @@ export default function LogPanel() {
   const { token } = useAuth();
   const socket = useSocket();
 
-  useEffect(() => {
-    axios.get("http://localhost:5000/api/logs", {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then((res) => setLogs(res.data));
-  }, [token]);
+useEffect(() => {
+  API.get("/api/logs", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((res) => setLogs(res.data))
+    .catch((err) =>
+      console.error("Failed to fetch logs:", err.response?.data || err.message)
+    );
+}, [token]);
 
   useEffect(() => {
     if (!socket) return;
