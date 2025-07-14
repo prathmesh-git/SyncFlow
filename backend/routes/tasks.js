@@ -21,9 +21,7 @@ const emitTaskDelete = (app, taskId) => {
 
 const emitLog = async (app, logId) => {
   const io = app.get("io");
-  const log = await Log.findById(logId)
-    .populate("userId")
-    .populate("taskId");
+  const log = await Log.findById(logId).populate("userId taskId");
   io.emit("log-created", log);
 };
 
@@ -37,7 +35,6 @@ router.post("/", async (req, res) => {
   const invalidTitles = ["Todo", "In Progress", "Done"];
 
   try {
-   
     if (invalidTitles.includes(title.trim())) {
       return res.status(400).json({ error: "Task title cannot match column names." });
     }
@@ -48,9 +45,17 @@ router.post("/", async (req, res) => {
     }
 
     const task = await Task.create({ title, description, assignedTo, status, priority });
-    await Log.create({ action: "created", taskId: task._id, userId: assignedTo });
+
+    
+    const log = await Log.create({
+      action: "created",
+      taskId: task._id,
+      userId: req.user.id,
+    });
 
     await emitTaskUpdate(req.app, task._id);
+    await emitLog(req.app, log._id); 
+
     res.status(201).json(task);
   } catch (err) {
     res.status(400).json({ error: err.message });
