@@ -1,5 +1,7 @@
 import { useAuth } from "../context/AuthContext";
 import "./Navbar.css";
+import syncflowIcon from '../assets/syncflow_icon.svg';
+
 
 export default function Navbar({ onLogout }) {
   const { user } = useAuth();
@@ -8,7 +10,7 @@ export default function Navbar({ onLogout }) {
     <nav className="navbar">
       <div className="navbar-left">
         <a href="/" className="navbar-logo-link">
-      <img src="./src/assets/syncflow_icon.svg" alt="Synflow Logo" width="32" height="32" />
+      <img src={syncflowIcon} alt="Synflow Logo" width="32" height="32" />
         <span className="navbar-logo">Syncflow</span>
       </a>
 

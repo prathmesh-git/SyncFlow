@@ -4,7 +4,7 @@ import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { BrowserRouter } from 'react-router-dom';
 import { SocketProvider } from "./context/SocketContext";
-// import './index.css';
+import './index.css';
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
