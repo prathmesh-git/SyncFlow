@@ -58,6 +58,9 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get("/ping", (req, res) => res.send("pong"));
+
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/logs', require('./routes/logs'));

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: collaborative-todo-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: MONGO_URI
+        value: mongodb+srv://prathmpimpalshende:wPcUtijx64ZeXy5F@cluster0.l3xn0vk.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - key: JWT_SECRET
+        value: SuperSecretJwtKey123
