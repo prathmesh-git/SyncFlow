@@ -1,24 +1,22 @@
 import { useDroppable } from "@dnd-kit/core";
 import TaskCard from "./TaskCard";
+import "./Column.css";
 
-export default function Column({ title, tasks, onSmartAssign }) {
+export default function Column({ title, tasks, onSmartAssign, onDelete }) {
   const { setNodeRef } = useDroppable({ id: title });
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        flex: 1,
-        padding: "10px",
-        minHeight: "300px",
-        backgroundColor: "#f2f2f2",
-        border: "1px solid #ccc",
-      }}
-    >
-      <h3>{title}</h3>
-      {tasks.map((task) => (
-        <TaskCard key={task._id} task={task} onSmartAssign={onSmartAssign}/>
-      ))}
+    <div ref={setNodeRef} className="column">
+      <h3 className="column-title">{title}</h3>
+      <div className="column-tasks">
+        {tasks.length === 0 ? (
+          <div className="no-tasks">No tasks</div>
+        ) : (
+          tasks.map((task) => (
+            <TaskCard key={task._id} task={task} onSmartAssign={onSmartAssign} onDelete={onDelete} />
+          ))
+        )}
+      </div>
     </div>
   );
 }

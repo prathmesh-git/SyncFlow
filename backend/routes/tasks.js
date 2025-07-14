@@ -20,8 +20,10 @@ const emitTaskDelete = (app, taskId) => {
 };
 
 const emitLog = async (app, logId) => {
-  const io  = app.get("io");
-  const log = await Log.findById(logId).populate("taskId userId");
+  const io = app.get("io");
+  const log = await Log.findById(logId)
+    .populate("userId")
+    .populate("taskId");
   io.emit("log-created", log);
 };
 
@@ -95,7 +97,7 @@ router.put("/:id", async (req, res) => {
     updates.updatedAt = Date.now();
 
     const task = await Task.findByIdAndUpdate(id, updates, { new: true }).populate("assignedTo");
-    const log = await Log.create({ action: "updated", taskId: task._id, userId: updates.assignedTo });
+    const log = await Log.create({ action: "updated", taskId: task._id, userId: req.user.id });
 
     await emitTaskUpdate(req.app, task._id);
     await emitLog(req.app, log._id);
@@ -124,7 +126,7 @@ router.post("/smart-assign/:id", async (req, res) => {
     await Task.findByIdAndUpdate(id, { assignedTo: bestUserId, updatedAt: Date.now() });
     const task = await Task.findById(id).populate("assignedTo");
 
-    const log = await Log.create({ action: "smart-assigned", taskId: id, userId: bestUserId });
+    const log = await Log.create({ action: "smart-assigned", taskId: id, userId: req.user.id, });
     await emitTaskUpdate(req.app, task._id);
     await emitLog(req.app, log._id);
     res.json(task);
@@ -138,13 +140,20 @@ router.delete("/:id", async (req, res) => {
 
   try {
     await Task.findByIdAndDelete(id);
-    const log = await Log.create({ action: "deleted", taskId: id });
+
+    const log = await Log.create({
+      action: "deleted",
+      taskId: id,
+      userId: req.user.id, 
+    });
+
     emitTaskDelete(req.app, id);
-    await emitLog(req.app, log._id);
+    await emitLog(req.app, log._id); 
     res.json({ message: "Task deleted" });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
+
 
 module.exports = router;

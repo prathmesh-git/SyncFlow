@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
+import "./LogPanel.css";
 
 export default function LogPanel() {
   const [logs, setLogs] = useState([]);
@@ -17,24 +18,34 @@ export default function LogPanel() {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("log-created", (newLog) => {
-      setLogs((prev) => [newLog, ...prev]);
-    });
+    const handleLog = (newLog) => {
+      setLogs((prev) => {
+        const updated = [newLog, ...prev];
+        return updated.slice(0, 20);
+      });
+    };
 
-    return () => socket.off("log-created");
+    socket.on("log-created", handleLog);
+    return () => socket.off("log-created", handleLog);
   }, [socket]);
 
   return (
-    <div>
+    <div className="log-panel">
       <h3>Activity Log</h3>
-      <ul>
-        {logs.map((log) => (
-          <li key={log._id}>
-            <strong>{log.userId?.username || "Unknown"}</strong> {log.action} task{" "}
-            <strong>{log.taskId?.title || "Deleted Task"}</strong> at{" "}
-            {new Date(log.timestamp).toLocaleString()}
-          </li>
-        ))}
+      <ul className="log-list">
+        {logs.length === 0 ? (
+          <li className="log-item empty">No activity yet</li>
+        ) : (
+          logs.map((log) => (
+            <li className="log-item" key={log._id}>
+              <strong>{log.userId?.username || "Someone"}</strong> {log.action}{" "}
+              <strong>{log.taskId?.title || "a task"}</strong>{" "}
+              <span className="log-time">
+                ({new Date(log.timestamp).toLocaleTimeString()})
+              </span>
+            </li>
+          ))
+        )}
       </ul>
     </div>
   );

@@ -1,0 +1,40 @@
+.log-panel {
+  background: #fefefe;
+  border-top: 1px solid #ddd;
+  margin-top: 20px;
+  padding: 15px 20px;
+  max-height: 250px;
+  overflow-y: auto;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+.log-panel h3 {
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.log-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.log-item:last-child {
+  border-bottom: none;
+}
+
+.log-item.empty {
+  color: #888;
+  font-style: italic;
+}
+
+.log-time {
+  color: #999;
+  font-size: 12px;
+}

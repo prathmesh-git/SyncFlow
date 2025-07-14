@@ -1,6 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
 
-export default function TaskCard({ task, onSmartAssign }) {
+export default function TaskCard({ task, onSmartAssign, onDelete }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: task._id,
   });
@@ -11,35 +11,55 @@ export default function TaskCard({ task, onSmartAssign }) {
     padding: "10px",
     marginBottom: "8px",
     backgroundColor: "#fff",
+    borderRadius: "8px",
+    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
   };
 
   return (
     <div ref={setNodeRef} style={style}>
-      {/* 👇 Make only this title area draggable */}
-      <div {...listeners} {...attributes} style={{ cursor: "grab" }}>
-        <strong>{task.title}</strong>
+      <div {...listeners} {...attributes} style={{ cursor: "grab", fontWeight: "bold" }}>
+        {task.title}
       </div>
 
       <p>{task.description}</p>
-      <small>Priority: {task.priority}</small>
-      <br />
-      <small>Assigned: {task.assignedTo?.username || "Unassigned"}</small>
-      <br />
-      <button
-        style={{
-          backgroundColor: "lightblue",
-          padding: "5px",
-          marginTop: "4px",
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          console.log("🧠 Button clicked!", task._id);
-          onSmartAssign(task._id);
-        }}
-      >
-        Smart Assign
-      </button>
+      <small>Priority: {task.priority}</small><br />
+      <small>Assigned: {task.assignedTo?.username || "Unassigned"}</small><br />
+
+      <div style={{ marginTop: "6px", display: "flex", gap: "6px" }}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onSmartAssign(task._id);
+          }}
+          style={{
+            backgroundColor: "#d0ebff",
+            border: "none",
+            padding: "4px 8px",
+            cursor: "pointer",
+            borderRadius: "4px",
+          }}
+        >
+          Smart Assign
+        </button>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onDelete(task._id);
+          }}
+          style={{
+            backgroundColor: "#ffe0e0",
+            border: "none",
+            padding: "4px 8px",
+            cursor: "pointer",
+            borderRadius: "4px",
+          }}
+        >
+          Delete
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { toast } from 'react-toastify';
+import "./TaskForm.css";
 
 export default function TaskForm({ onSubmit, onClose }) {
   const [task, setTask] = useState({
@@ -12,49 +14,67 @@ export default function TaskForm({ onSubmit, onClose }) {
     setTask({ ...task, [e.target.name]: e.target.value });
   };
 
-const handleSubmit = (e) => {
+ const handleSubmit = async (e) => {
   e.preventDefault();
+  toast.dismiss();
 
   const invalidTitles = ["todo", "in progress", "done"];
-  const trimmedTitle = form.title.trim().toLowerCase();
+  const trimmedTitle = task.title.trim().toLowerCase();
+
+  if (!trimmedTitle) {
+    toast.error("Title is required");
+    return;
+  }
 
   if (invalidTitles.includes(trimmedTitle)) {
-    alert("Task title cannot be 'Todo', 'In Progress' or 'Done'");
+    toast.error("Task title cannot be 'Todo', 'In Progress' or 'Done'");
     return;
   }
 
-  if (!form.title.trim()) {
-    alert("Title is required");
-    return;
+  try {
+    await onSubmit(task); // must throw error if task creation fails
+    console.log("Task added!");
+  } catch (err) {
+    console.error("Error creating task: " + (err.response?.data?.error || err.message));
   }
-
-  onSubmit(form);
 };
 
   return (
-    <div style={{
-      position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
-      background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center"
-    }}>
-      <form onSubmit={handleSubmit} style={{
-        background: "#fff", padding: "20px", borderRadius: "8px", width: "300px"
-      }}>
+    <div className="taskform-backdrop">
+      <form className="taskform-container" onSubmit={handleSubmit}>
         <h3>Add New Task</h3>
-        <input name="title" placeholder="Title" required value={task.title} onChange={handleChange} />
-        <textarea name="description" placeholder="Description" value={task.description} onChange={handleChange}></textarea>
+
+        <input
+          name="title"
+          placeholder="Title"
+          required
+          value={task.title}
+          onChange={handleChange}
+        />
+
+        <textarea
+          name="description"
+          placeholder="Description"
+          value={task.description}
+          onChange={handleChange}
+        />
+
         <select name="status" value={task.status} onChange={handleChange}>
           <option>Todo</option>
           <option>In Progress</option>
           <option>Done</option>
         </select>
+
         <select name="priority" value={task.priority} onChange={handleChange}>
           <option>Low</option>
           <option>Medium</option>
           <option>High</option>
         </select>
-        <br /><br />
-        <button type="submit">Add Task</button>
-        <button type="button" onClick={onClose} style={{ marginLeft: "10px" }}>Cancel</button>
+
+        <div className="taskform-buttons">
+          <button type="submit" className="submit-btn">Add Task</button>
+          <button type="button" className="cancel-btn" onClick={onClose}>Cancel</button>
+        </div>
       </form>
     </div>
   );
