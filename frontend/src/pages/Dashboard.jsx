@@ -190,16 +190,16 @@ export default function Dashboard() {
     }
   };
 
-  const sensors = useSensors(
-  useSensor(PointerSensor),
-  useSensor(TouchSensor, {
-    activationConstraint: {
-      delay: 250, 
-      tolerance: 5,
-    },
-  })
-);
-
+    const sensors = useSensors(
+      useSensor(PointerSensor),
+      useSensor(TouchSensor, {
+        activationConstraint: {
+          delay: 250,
+          tolerance: 5,
+        },
+      })
+    );
+    
   return (
     <>
       <Navbar onLogout={logout} />
@@ -216,7 +216,7 @@ export default function Dashboard() {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={closestCorners}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
