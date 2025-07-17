@@ -6,7 +6,15 @@ import TaskForm from "../components/TaskForm";
 import LogPanel from "../components/LogPanel";
 import ConflictModal from "../components/ConflictModal";
 import { useSocket } from "../context/SocketContext";
-import { DndContext, closestCenter, DragOverlay } from "@dnd-kit/core";
+import {
+  DndContext,
+  closestCenter,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import Navbar from "../components/Navbar";
 import { toast } from "react-toastify";
 import "./Dashboard.css";
@@ -130,7 +138,7 @@ export default function Dashboard() {
           serverTask: err.response.data.serverData,
         });
       } else {
-        console.error("❌ Error updating task:", err);
+        console.error("Error updating task:", err);
       }
     }
 
@@ -182,6 +190,16 @@ export default function Dashboard() {
     }
   };
 
+  const sensors = useSensors(
+  useSensor(PointerSensor),
+  useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 250, 
+      tolerance: 5,
+    },
+  })
+);
+
   return (
     <>
       <Navbar onLogout={logout} />
@@ -197,10 +215,12 @@ export default function Dashboard() {
         </div>
 
         <DndContext
+          sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
+
           <div className="board">
             {Object.keys(grouped).map((status) => (
               <Column
