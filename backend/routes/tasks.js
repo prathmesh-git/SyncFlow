@@ -46,7 +46,6 @@ router.post("/", async (req, res) => {
 
     const task = await Task.create({ title, description, assignedTo, status, priority });
 
-    
     const log = await Log.create({
       action: "created",
       taskId: task._id,
@@ -54,10 +53,12 @@ router.post("/", async (req, res) => {
     });
 
     await emitTaskUpdate(req.app, task._id);
-    await emitLog(req.app, log._id); 
+    await emitLog(req.app, log._id);
 
     res.status(201).json(task);
   } catch (err) {
+    console.error("POST /api/tasks failed:", err.message);
+    console.error("Full error:", err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -72,23 +73,20 @@ router.put("/:id", async (req, res) => {
     const existing = await Task.findById(id);
     if (!existing) return res.status(404).json({ error: "Task not found" });
 
-    // ✅ FIXED: Check conflict using existing.updatedAt
-    if (
-      updatedAt &&
-      new Date(updatedAt).toISOString() !== new Date(existing.updatedAt).toISOString()
-    ) {
-      return res.status(409).json({ conflict: true, serverData: existing });
+    if (updatedAt) {
+      const diff = Math.abs(new Date(updatedAt).getTime() - new Date(existing.updatedAt).getTime());
+      if (diff > 1000) {
+        return res.status(409).json({ conflict: true, serverData: existing });
+      }
     }
 
     const { title } = updates;
     const invalidTitles = ["Todo", "In Progress", "Done"];
 
-    // ✅ Validate title doesn't match column names
     if (title && invalidTitles.includes(title.trim())) {
       return res.status(400).json({ error: "Task title cannot match column names." });
     }
 
-    // ✅ Check for uniqueness
     if (title) {
       const duplicate = await Task.findOne({ title: title.trim() });
       if (duplicate && duplicate._id.toString() !== id) {
@@ -102,7 +100,7 @@ router.put("/:id", async (req, res) => {
       updates.assignedTo = existing.assignedTo;
     }
 
-    updates.updatedAt = Date.now();
+    updates.updatedAt = new Date();
 
     const task = await Task.findByIdAndUpdate(id, updates, { new: true }).populate("assignedTo");
 
@@ -131,9 +129,12 @@ router.post("/smart-assign/:id", async (req, res) => {
     const task = await Task.findById(id);
     if (!task) return res.status(404).json({ error: "Task not found" });
 
-   if (new Date(updatedAt).toISOString() !== new Date(task.updatedAt).toISOString()) {
-  return res.status(409).json({ conflict: true, serverData: task });
-}
+    if (updatedAt) {
+      const diff = Math.abs(new Date(updatedAt).getTime() - new Date(task.updatedAt).getTime());
+      if (diff > 1000) {
+        return res.status(409).json({ conflict: true, serverData: task });
+      }
+    }
 
     const users = await User.find();
     const counts = await Promise.all(
@@ -144,10 +145,10 @@ router.post("/smart-assign/:id", async (req, res) => {
     );
 
     const bestUserId = counts.sort((a, b) => a.count - b.count)[0].id;
-    
+
     const updatedTask = await Task.findByIdAndUpdate(
       id,
-      { assignedTo: bestUserId, updatedAt: Date.now() },
+      { assignedTo: bestUserId, updatedAt: new Date() },
       { new: true }
     ).populate("assignedTo");
 
@@ -162,6 +163,8 @@ router.post("/smart-assign/:id", async (req, res) => {
 
     res.json(updatedTask);
   } catch (err) {
+    console.error("POST /api/tasks/smart-assign/:id failed:", err.message);
+    console.error("Full error:", err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -175,16 +178,18 @@ router.delete("/:id", async (req, res) => {
     const log = await Log.create({
       action: "deleted",
       taskId: id,
-      userId: req.user.id, 
+      userId: req.user.id,
     });
 
     emitTaskDelete(req.app, id);
-    await emitLog(req.app, log._id); 
+    await emitLog(req.app, log._id);
+
     res.json({ message: "Task deleted" });
   } catch (err) {
+    console.error("DELETE /api/tasks/:id failed:", err.message);
+    console.error("Full error:", err);
     res.status(400).json({ error: err.message });
   }
 });
-
 
 module.exports = router;
