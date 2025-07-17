@@ -8,7 +8,7 @@ import ConflictModal from "../components/ConflictModal";
 import { useSocket } from "../context/SocketContext";
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
   DragOverlay,
   PointerSensor,
   TouchSensor,
@@ -28,6 +28,8 @@ export default function Dashboard() {
   const [activeTask, setActiveTask] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [conflict, setConflict] = useState(null);
+  const [conflictSource, setConflictSource] = useState(null);
+
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -177,18 +179,34 @@ export default function Dashboard() {
     }
   };
 
-  const handleSmartAssign = async (taskId) => {
-    try {
-      const res = await API.post(
-        `/api/tasks/smart-assign/${taskId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setTasks((prev) => prev.map((t) => (t._id === taskId ? res.data : t)));
-    } catch (err) {
-      alert("Smart Assign failed: " + (err.response?.data?.error || err.message));
+const handleSmartAssign = async (taskId) => {
+  const task = tasks.find((t) => t._id === taskId);
+  if (!task) return;
+
+  try {
+    const res = await API.post(
+      `/api/tasks/smart-assign/${taskId}`,
+      { updatedAt: task.updatedAt },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    setTasks((prev) => prev.map((t) => (t._id === taskId ? res.data : t)));
+  } catch (err) {
+    if (err.response?.status === 409) {
+      setConflict({
+        localTask: {
+          ...task,
+          updatedAt: new Date(task.updatedAt), // for retry
+        },
+        serverTask: err.response.data.serverData,
+      });
+      setConflictSource("smartAssign");
+    } else {
+      toast.error("Smart Assign failed: " + (err.response?.data?.error || err.message));
     }
-  };
+  }
+};
+
 
     const sensors = useSensors(
       useSensor(PointerSensor),
@@ -249,14 +267,34 @@ export default function Dashboard() {
           localTask={conflict.localTask}
           serverTask={conflict.serverTask}
           onCancel={() => setConflict(null)}
-          onResolve={(mergedTask) => {
-            setTasks((prev) =>
-              prev.map((t) => (t._id === mergedTask._id ? mergedTask : t))
-            );
-            setConflict(null);
-          }}
-        />
-      )}
+          onResolve={async (mergedTask) => {
+            try {
+              const res =
+                conflictSource === "smartAssign"
+                  ? await API.post(
+                      `/api/tasks/smart-assign/${mergedTask._id}`,
+                      { updatedAt: mergedTask.updatedAt },
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    )
+                  : await API.put(
+                      `/api/tasks/${mergedTask._id}`,
+                      mergedTask,
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+
+                      setTasks((prev) =>
+                        prev.map((t) => (t._id === mergedTask._id ? res.data : t))
+                      );
+                    } catch (err) {
+                      toast.error("Conflict resolution failed: " + (err.response?.data?.error || err.message));
+                    } finally {
+                      setConflict(null);
+                      setConflictSource(null);
+                    }
+                  }}
+
+                />
+              )}
 
       </div>
     </>

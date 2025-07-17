@@ -72,11 +72,11 @@ router.put("/:id", async (req, res) => {
     const existing = await Task.findById(id);
     if (!existing) return res.status(404).json({ error: "Task not found" });
 
-    if (new Date(updatedAt).getTime() !== new Date(existing.updatedAt).getTime()) {
-      return res.status(409).json({ conflict: true, serverData: existing });
+     if (updatedAt && new Date(updatedAt).toISOString() !== new Date(task.updatedAt).toISOString()) {
+      return res.status(409).json({ conflict: true, serverData: task });
     }
 
-    // ✅ Extract title properly
+   
     const { title } = updates;
     const invalidTitles = ["Todo", "In Progress", "Done"];
 
@@ -117,9 +117,17 @@ router.put("/:id", async (req, res) => {
 
 router.post("/smart-assign/:id", async (req, res) => {
   const { id } = req.params;
+  const { updatedAt } = req.body;
 
   try {
-    const users  = await User.find();
+    const task = await Task.findById(id);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+
+   if (new Date(updatedAt).toISOString() !== new Date(task.updatedAt).toISOString()) {
+  return res.status(409).json({ conflict: true, serverData: task });
+}
+
+    const users = await User.find();
     const counts = await Promise.all(
       users.map(async (u) => ({
         id: u._id,
@@ -128,13 +136,23 @@ router.post("/smart-assign/:id", async (req, res) => {
     );
 
     const bestUserId = counts.sort((a, b) => a.count - b.count)[0].id;
-    await Task.findByIdAndUpdate(id, { assignedTo: bestUserId, updatedAt: Date.now() });
-    const task = await Task.findById(id).populate("assignedTo");
+    
+    const updatedTask = await Task.findByIdAndUpdate(
+      id,
+      { assignedTo: bestUserId, updatedAt: Date.now() },
+      { new: true }
+    ).populate("assignedTo");
 
-    const log = await Log.create({ action: "smart-assigned", taskId: id, userId: req.user.id, });
-    await emitTaskUpdate(req.app, task._id);
+    const log = await Log.create({
+      action: "smart-assigned",
+      taskId: id,
+      userId: req.user.id,
+    });
+
+    await emitTaskUpdate(req.app, updatedTask._id);
     await emitLog(req.app, log._id);
-    res.json(task);
+
+    res.json(updatedTask);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

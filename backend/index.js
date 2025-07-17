@@ -12,7 +12,8 @@ const app = express();
 const server = http.createServer(app);
 
 const allowedOrigins = [
-  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:5000",
   "https://sync-flow-prathmesh-pimpalshendes-projects.vercel.app",
 ];
 

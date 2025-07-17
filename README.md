@@ -37,15 +37,11 @@
 - Socket.IO
 - JWT for auth
 - Render (deployment)
-
-## 📸 Screenshots
-
-> Screenshots available in the deployment section or demo video.
+g
 
 ## 🔐 User Roles
 
 - Anyone can **Register/Login**
-- Users can only manage their own assigned tasks
 
 ## 🧪 How to Test Conflict
 

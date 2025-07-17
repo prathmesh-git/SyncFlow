@@ -1,13 +1,6 @@
 import { useState } from "react";
+import "./ConflictModal.css";
 
-/**
- * ConflictModal
- * Props:
- *  - localTask:   the task object in the client state (user's attempt)
- *  - serverTask:  most‑recent task from the server
- *  - onResolve(finalTask)  => void  (called with whichever task version / merged version user picks)
- *  - onCancel()           => void  (close modal without saving)
- */
 export default function ConflictModal({ localTask, serverTask, onResolve, onCancel }) {
   const [merged, setMerged] = useState(() => ({
     title: localTask.title,
@@ -16,98 +9,70 @@ export default function ConflictModal({ localTask, serverTask, onResolve, onCanc
     priority: localTask.priority,
     assignedTo: typeof localTask.assignedTo === "object" ? localTask.assignedTo._id : localTask.assignedTo,
     _id: localTask._id,
+    updatedAt: localTask.updatedAt,
   }));
 
-  const inputClass = "w-full p-2 border rounded-lg mb-2";
-  const labelClass = "text-sm text-gray-600 mb-1";
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl p-6 space-y-4">
-        <h3 className="text-xl font-semibold">Conflict Detected</h3>
-        <p className="text-sm text-gray-600">
-          Another user updated this task meanwhile. Choose how to proceed:
-        </p>
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h3>⚠️ Conflict Detected</h3>
+        <p>This task was modified elsewhere. Choose how you'd like to proceed:</p>
 
-        {/* ----- Quick actions ----- */}
-        <div className="flex gap-2 flex-wrap">
-          <button
-            className="px-4 py-2 rounded-xl shadow bg-red-500 text-white hover:bg-red-600 transition"
-            onClick={() => onResolve(localTask)}
-          >
-            Overwrite with <span className="font-bold">My version</span>
+        <div className="conflict-buttons">
+          <button className="btn-danger" onClick={() => onResolve(localTask)}>
+            Overwrite with <strong>My version</strong>
           </button>
-          <button
-            className="px-4 py-2 rounded-xl shadow bg-blue-500 text-white hover:bg-blue-600 transition"
-            onClick={() => onResolve(serverTask)}
-          >
-            Keep <span className="font-bold">Server version</span>
+          <button className="btn-primary" onClick={() => onResolve(serverTask)}>
+            Keep <strong>Server version</strong>
           </button>
         </div>
 
-        <hr className="my-4" />
+        <hr />
 
-        {/* ----- Merge form ----- */}
-        <h4 className="font-medium mt-2">Or merge manually:</h4>
-        <div className="space-y-2">
-          <div>
-            <label className={labelClass}>Title</label>
-            <input
-              className={inputClass}
-              value={merged.title}
-              onChange={(e) => setMerged({ ...merged, title: e.target.value })}
-            />
+        <h4>Or merge manually:</h4>
+        <div className="form-group">
+          <label>Title</label>
+          <input
+            value={merged.title}
+            onChange={(e) => setMerged({ ...merged, title: e.target.value })}
+          />
+        </div>
+        <div className="form-group">
+          <label>Description</label>
+          <textarea
+            rows={3}
+            value={merged.description}
+            onChange={(e) => setMerged({ ...merged, description: e.target.value })}
+          />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Status</label>
+            <select
+              value={merged.status}
+              onChange={(e) => setMerged({ ...merged, status: e.target.value })}
+            >
+              <option>Todo</option>
+              <option>In Progress</option>
+              <option>Done</option>
+            </select>
           </div>
-          <div>
-            <label className={labelClass}>Description</label>
-            <textarea
-              rows={3}
-              className={inputClass}
-              value={merged.description}
-              onChange={(e) => setMerged({ ...merged, description: e.target.value })}
-            />
-          </div>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className={labelClass}>Status</label>
-              <select
-                className={inputClass}
-                value={merged.status}
-                onChange={(e) => setMerged({ ...merged, status: e.target.value })}
-              >
-                <option>Todo</option>
-                <option>In Progress</option>
-                <option>Done</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className={labelClass}>Priority</label>
-              <select
-                className={inputClass}
-                value={merged.priority}
-                onChange={(e) => setMerged({ ...merged, priority: e.target.value })}
-              >
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
-              </select>
-            </div>
+          <div className="form-group">
+            <label>Priority</label>
+            <select
+              value={merged.priority}
+              onChange={(e) => setMerged({ ...merged, priority: e.target.value })}
+            >
+              <option>Low</option>
+              <option>Medium</option>
+              <option>High</option>
+            </select>
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4">
-          <button
-            className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 transition"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className="px-4 py-2 rounded-xl bg-green-500 text-white hover:bg-green-600 transition"
-            onClick={() => onResolve(merged)}
-          >
-            Save Merged
-          </button>
+        <div className="modal-footer">
+          <button className="btn-cancel" onClick={onCancel}>Cancel</button>
+          <button className="btn-success" onClick={() => onResolve(merged)}>Save Merged</button>
         </div>
       </div>
     </div>
