@@ -14,17 +14,16 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  "https://sync-flow-seven.vercel.app", // adjust to actual Vercel URL
+  "https://sync-flow-prathmesh-pimpalshendes-projects.vercel.app/"
 ];
 
-// ✅ CORS middleware MUST come first and use credentials
 app.use(
   cors({
     origin: function (origin, callback) {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("❌ CORS not allowed for origin: " + origin));
+        callback(new Error("CORS not allowed for origin: " + origin));
       }
     },
     credentials: true,
@@ -47,16 +46,16 @@ io.on("connection", (socket) => {
   const token = socket.handshake.auth?.token;
 
   if (!token) {
-    console.log("❌ No token. Disconnecting:", socket.id);
+    console.log("No token. Disconnecting:", socket.id);
     return socket.disconnect();
   }
 
   try {
     const { userId } = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("🟢 Socket authenticated:", userId);
+    console.log("Socket authenticated:", userId);
     socket.userId = userId;
   } catch (err) {
-    console.error("❌ Invalid token:", err.message);
+    console.error("Invalid token:", err.message);
     socket.emit("auth_error", "Invalid token");
     return socket.disconnect();
   }
@@ -67,27 +66,27 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("🔌 Socket disconnected:", socket.id);
+    console.log("Socket disconnected:", socket.id);
   });
 });
 
-// ✅ Expose io to routes
+
 app.set("io", io);
 
-// ✅ Routes
+
 app.get("/ping", (_, res) => res.send("pong"));
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/tasks", require("./routes/tasks"));
 app.use("/api/logs", require("./routes/logs"));
 
-// ✅ MongoDB and Server Init
+//  MongoDB and Server Init
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
-    console.log("✅ MongoDB connected");
+    console.log("MongoDB connected");
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, () =>
-      console.log(`🚀 Server running on http://localhost:${PORT}`)
+      console.log(` Server running on http://localhost:${PORT}`)
     );
   })
   .catch(console.error);
