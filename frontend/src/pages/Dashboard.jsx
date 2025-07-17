@@ -183,10 +183,16 @@ const handleSmartAssign = async (taskId) => {
   const task = tasks.find((t) => t._id === taskId);
   if (!task) return;
 
+  const updatedAtISO = task.updatedAt ? new Date(task.updatedAt).toISOString() : null;
+  if (!updatedAtISO || updatedAtISO === "Invalid Date") {
+    toast.error("Smart Assign failed: Invalid or missing updatedAt timestamp.");
+    return;
+  }
+
   try {
     const res = await API.post(
       `/api/tasks/smart-assign/${taskId}`,
-      { updatedAt: task.updatedAt },
+      { updatedAt: updatedAtISO },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -196,7 +202,7 @@ const handleSmartAssign = async (taskId) => {
       setConflict({
         localTask: {
           ...task,
-          updatedAt: new Date(task.updatedAt), // for retry
+          updatedAt: updatedAtISO,
         },
         serverTask: err.response.data.serverData,
       });
@@ -206,7 +212,6 @@ const handleSmartAssign = async (taskId) => {
     }
   }
 };
-
 
     const sensors = useSensors(
       useSensor(PointerSensor),
@@ -262,39 +267,43 @@ const handleSmartAssign = async (taskId) => {
 
         <LogPanel logs={logs} />
 
-       {conflict && (
-        <ConflictModal
-          localTask={conflict.localTask}
-          serverTask={conflict.serverTask}
-          onCancel={() => setConflict(null)}
-          onResolve={async (mergedTask) => {
-            try {
-              const res =
-                conflictSource === "smartAssign"
-                  ? await API.post(
-                      `/api/tasks/smart-assign/${mergedTask._id}`,
-                      { updatedAt: mergedTask.updatedAt },
-                      { headers: { Authorization: `Bearer ${token}` } }
-                    )
-                  : await API.put(
-                      `/api/tasks/${mergedTask._id}`,
-                      mergedTask,
-                      { headers: { Authorization: `Bearer ${token}` } }
-                    );
+{conflict && (
+  <ConflictModal
+    localTask={conflict.localTask}
+    serverTask={conflict.serverTask}
+    onCancel={() => setConflict(null)}
+    onResolve={async (mergedTask) => {
+      try {
+        // ✅ Always use server's updatedAt
+        const isoUpdatedAt = new Date(conflict.serverTask.updatedAt).toISOString();
 
-                      setTasks((prev) =>
-                        prev.map((t) => (t._id === mergedTask._id ? res.data : t))
-                      );
-                    } catch (err) {
-                      toast.error("Conflict resolution failed: " + (err.response?.data?.error || err.message));
-                    } finally {
-                      setConflict(null);
-                      setConflictSource(null);
-                    }
-                  }}
+        const res =
+          conflictSource === "smartAssign"
+            ? await API.post(
+                `/api/tasks/smart-assign/${mergedTask._id}`,
+                { updatedAt: isoUpdatedAt },
+                { headers: { Authorization: `Bearer ${token}` } }
+              )
+            : await API.put(
+                `/api/tasks/${mergedTask._id}`,
+                { ...mergedTask, updatedAt: isoUpdatedAt },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
 
-                />
-              )}
+        setTasks((prev) =>
+          prev.map((t) => (t._id === mergedTask._id ? res.data : t))
+        );
+      } catch (err) {
+        toast.error(
+          "Conflict resolution failed: " + (err.response?.data?.error || err.message)
+        );
+      } finally {
+        setConflict(null);
+        setConflictSource(null);
+      }
+    }}
+  />
+)}
 
       </div>
     </>

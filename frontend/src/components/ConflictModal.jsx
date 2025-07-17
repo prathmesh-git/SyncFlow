@@ -2,15 +2,19 @@ import { useState } from "react";
 import "./conflictModal.css";
 
 export default function ConflictModal({ localTask, serverTask, onResolve, onCancel }) {
-  const [merged, setMerged] = useState(() => ({
-    title: localTask.title,
-    description: localTask.description,
-    status: serverTask.status,
-    priority: localTask.priority,
-    assignedTo: typeof localTask.assignedTo === "object" ? localTask.assignedTo._id : localTask.assignedTo,
-    _id: localTask._id,
-    updatedAt: localTask.updatedAt,
-  }));
+    const [merged, setMerged] = useState(() => ({
+      title: localTask.title,
+      description: localTask.description,
+      status: serverTask.status,
+      priority: localTask.priority,
+      assignedTo:
+        typeof localTask.assignedTo === "object"
+          ? localTask.assignedTo._id
+          : localTask.assignedTo,
+      _id: localTask._id,
+      updatedAt: new Date(serverTask.updatedAt).toISOString(),
+
+    }));
 
   return (
     <div className="modal-overlay">
