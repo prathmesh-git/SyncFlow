@@ -72,11 +72,14 @@ router.put("/:id", async (req, res) => {
     const existing = await Task.findById(id);
     if (!existing) return res.status(404).json({ error: "Task not found" });
 
-     if (updatedAt && new Date(updatedAt).toISOString() !== new Date(task.updatedAt).toISOString()) {
-      return res.status(409).json({ conflict: true, serverData: task });
+    // ✅ FIXED: Check conflict using existing.updatedAt
+    if (
+      updatedAt &&
+      new Date(updatedAt).toISOString() !== new Date(existing.updatedAt).toISOString()
+    ) {
+      return res.status(409).json({ conflict: true, serverData: existing });
     }
 
-   
     const { title } = updates;
     const invalidTitles = ["Todo", "In Progress", "Done"];
 
@@ -102,7 +105,12 @@ router.put("/:id", async (req, res) => {
     updates.updatedAt = Date.now();
 
     const task = await Task.findByIdAndUpdate(id, updates, { new: true }).populate("assignedTo");
-    const log = await Log.create({ action: "updated", taskId: task._id, userId: req.user.id });
+
+    const log = await Log.create({
+      action: "updated",
+      taskId: task._id,
+      userId: req.user.id,
+    });
 
     await emitTaskUpdate(req.app, task._id);
     await emitLog(req.app, log._id);
