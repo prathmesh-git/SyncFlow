@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./ConflictModal.css";
+import "./conflictModal.css";
 
 export default function ConflictModal({ localTask, serverTask, onResolve, onCancel }) {
   const [merged, setMerged] = useState(() => ({
