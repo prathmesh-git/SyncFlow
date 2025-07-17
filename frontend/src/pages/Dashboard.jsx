@@ -117,14 +117,21 @@ export default function Dashboard() {
     };
 
     if (!payload.title || !payload.status || !payload.updatedAt) return;
-
     try {
       const res = await API.put(`/api/tasks/${task._id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTasks((prev) => prev.map((t) => (t._id === task._id ? res.data : t)));
     } catch (err) {
-      console.error("Error updating task:", err);
+      if (err.response && err.response.status === 409) {
+        console.warn("⚠️ Conflict detected. Launching conflict modal.");
+        setConflict({
+          localTask: payload,
+          serverTask: err.response.data.serverData,
+        });
+      } else {
+        console.error("❌ Error updating task:", err);
+      }
     }
 
     setActiveTask(null);
@@ -217,18 +224,20 @@ export default function Dashboard() {
 
         <LogPanel logs={logs} />
 
-        {conflict && (
-          <ConflictModal
-            conflict={conflict}
-            onCancel={() => setConflict(null)}
-            onResolved={(mergedTask) => {
-              setTasks((prev) =>
-                prev.map((t) => (t._id === mergedTask._id ? mergedTask : t))
-              );
-              setConflict(null);
-            }}
-          />
-        )}
+       {conflict && (
+        <ConflictModal
+          localTask={conflict.localTask}
+          serverTask={conflict.serverTask}
+          onCancel={() => setConflict(null)}
+          onResolve={(mergedTask) => {
+            setTasks((prev) =>
+              prev.map((t) => (t._id === mergedTask._id ? mergedTask : t))
+            );
+            setConflict(null);
+          }}
+        />
+      )}
+
       </div>
     </>
   );
